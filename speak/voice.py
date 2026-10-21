@@ -6,6 +6,7 @@ import logging
 import re
 import threading
 import wave
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -13,7 +14,36 @@ import numpy as np
 log = logging.getLogger(__name__)
 
 SLOW_LENGTH_SCALE = 1.25
+UNSURE_PROBABILITY = 0.55   # ниже — Whisper сомневается, что услышал именно это слово
 _MARKUP = re.compile(r"[*_#`~>\[\]]")
+_EDGE_PUNCT = re.compile(r"^[^\w']+|[^\w']+$")
+
+
+@dataclass(frozen=True)
+class Word:
+    text: str
+    start: float
+    end: float
+    probability: float
+
+    @property
+    def unsure(self) -> bool:
+        return self.probability < UNSURE_PROBABILITY
+
+    def public(self) -> dict:
+        return {"text": self.text, "start": round(self.start, 2), "end": round(self.end, 2), "unsure": self.unsure}
+
+
+@dataclass(frozen=True)
+class Transcript:
+    text: str
+    words: tuple[Word, ...] = ()
+
+
+def to_word(text: str, start: float, end: float, probability: float) -> Word | None:
+    clean = _EDGE_PUNCT.sub("", text.strip())
+    # float(): Whisper отдаёт numpy.float32, который не сериализуется в JSON
+    return Word(clean, float(start), float(end), float(probability)) if clean else None
 
 
 class Transcriber:
@@ -30,13 +60,16 @@ class Transcriber:
             self._model = WhisperModel(self._model_name, device="cpu", compute_type="int8")
         return self._model
 
-    def transcribe(self, samples: np.ndarray) -> str:
+    def transcribe(self, samples: np.ndarray) -> Transcript:
         with self._lock:
             model = self._load()
             # без initial_prompt и контекста: Whisper не должен «додумывать» правильную грамматику
             segments, _ = model.transcribe(samples, language="en", beam_size=1, vad_filter=True,
-                                           condition_on_previous_text=False)
-            return " ".join(s.text.strip() for s in segments).strip()
+                                           condition_on_previous_text=False, word_timestamps=True)
+            segments = list(segments)  # генератор: распознавание идёт при чтении, держим блокировку
+        text = " ".join(s.text.strip() for s in segments).strip()
+        words = (to_word(w.word, w.start, w.end, w.probability) for s in segments for w in (s.words or []))
+        return Transcript(text, tuple(w for w in words if w))
 
 
 class Speaker:

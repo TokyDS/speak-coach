@@ -4,13 +4,14 @@ import random
 import pytest
 
 from speak import scenarios
-from speak.session import MAX_SESSIONS, SessionStore, Turn, load_history, save, words_per_minute
+from speak.session import (MAX_SESSIONS, SessionStore, Turn, assessed_levels, load_history, load_records, save,
+                           words_per_minute)
 
 SCENARIO = scenarios.get("smalltalk")
 
 
-def _turn(heard: str, seconds: float, ok: bool) -> Turn:
-    feedback = {"ok": ok, "corrected": heard if ok else heard + " fixed", "natural": heard}
+def _turn(heard: str, seconds: float, ok: bool, level: str = "B1") -> Turn:
+    feedback = {"ok": ok, "corrected": heard if ok else heard + " fixed", "natural": heard, "level": level}
     return Turn(heard, seconds, "Nice! And then?", feedback)
 
 
@@ -36,7 +37,7 @@ def test_history_and_corrections_and_stats():
 
     assert [l.speaker for l in s.history()] == ["partner", "learner", "partner", "learner", "partner"]
     assert s.corrections() == [("I go home", "I go home fixed")]
-    assert s.stats() == {"turns": 2, "words": 6, "seconds": 6, "wpm": 60, "clean": 1}
+    assert s.stats() == {"turns": 2, "words": 6, "seconds": 6, "wpm": 60, "clean": 1, "level": "B1"}
 
 
 def test_store_evicts_oldest_session():
@@ -63,6 +64,27 @@ def test_save_and_load_history_round_trip(tmp_path):
     history = load_history(tmp_path / "sessions")
     assert len(history) == 1
     assert history[0]["focus"][0]["topic"] == "Прошедшее время"
+
+
+def test_autosave_overwrites_one_file_and_feeds_level_estimate(tmp_path):
+    store = SessionStore()
+    s = store.create(SCENARIO, False, "Hey!", partner_level="A2")
+    s = store.add_turn(s.id, _turn("I go home", 3, ok=False, level="A2"))
+    save(s, None, tmp_path)                                    # после первой реплики
+    s = store.add_turn(s.id, _turn("It was a long and tiring day", 4, ok=True, level="B1"))
+    save(s, None, tmp_path)                                    # после второй — тот же файл
+    files = list(tmp_path.glob("*.json"))
+    assert len(files) == 1 and not list(tmp_path.glob("*.tmp"))
+    record = json.loads(files[0].read_text(encoding="utf-8"))
+    assert record["summary"] is None and record["partner_level"] == "A2"
+    assert [t["level"] for t in record["turns"]] == ["A2", "B1"]
+    assert record["turns"][1]["words"] == 7 and record["turns"][1]["ok"] is True
+    assert assessed_levels(load_records(tmp_path)) == ["A2", "B1"]
+
+
+def test_assessed_levels_go_from_old_to_new():
+    records = [{"turns": [{"level": "B2"}]}, {"turns": [{"level": "A2"}, "junk"]}, {"turns": "broken"}]
+    assert assessed_levels(records) == ["A2", "B2"]   # records — новые первыми
 
 
 def test_load_history_skips_odd_files(tmp_path):

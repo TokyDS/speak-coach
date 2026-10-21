@@ -10,13 +10,49 @@
 </head>
 <body>
 
-<!-- ===== Выбор разговора ===== -->
+<!-- ===== Старт ===== -->
 <main id="start" class="page">
   <header class="masthead">
     <h1 class="brand">Speak&nbsp;Up</h1>
     <p class="lede">Выбери, о чём поговорить. Отвечай вслух: держи <kbd>Пробел</kbd> или нажми на микрофон.
       После каждой реплики увидишь, как сказать правильнее и естественнее.</p>
   </header>
+
+  <section class="strip" aria-label="Уровень, тетрадь и прогресс">
+    <article class="panel level-panel" aria-labelledby="lvl-title">
+      <h2 id="lvl-title" class="eyebrow">Твой уровень</h2>
+      <div class="level-now"><span id="lvl-code" class="level-code">—</span><p id="lvl-text" class="panel-text"></p></div>
+      <div class="meter" aria-hidden="true"><span id="lvl-bar"></span></div>
+      <div class="field">
+        <span class="field-label" id="diff-label">Собеседник говорит</span>
+        <div class="segmented" role="radiogroup" aria-labelledby="diff-label" id="difficulty">
+          <button type="button" role="radio" data-value="easier">попроще</button>
+          <button type="button" role="radio" data-value="same">как я</button>
+          <button type="button" role="radio" data-value="harder">посложнее</button>
+        </div>
+      </div>
+      <label class="field"><span class="field-label">Мой уровень</span>
+        <select id="opt-level"><option value="auto">Авто — по моим репликам</option></select></label>
+    </article>
+
+    <article class="panel" aria-labelledby="pb-title">
+      <h2 id="pb-title" class="eyebrow">Тетрадь фраз</h2>
+      <p class="big-num"><span id="pb-due">0</span><small> на сегодня</small></p>
+      <p id="pb-text" class="panel-text">Добавляй исправления и полезные фразы из разговоров — тут их можно повторять вслух.</p>
+      <div class="panel-actions">
+        <button type="button" class="primary small" id="btn-review" disabled>Повторить</button>
+        <button type="button" class="ghost small" id="btn-cards">Все фразы</button>
+      </div>
+    </article>
+
+    <article class="panel" aria-labelledby="pr-title">
+      <h2 id="pr-title" class="eyebrow">Прогресс</h2>
+      <p class="big-num"><span id="pr-streak">0</span><small id="pr-streak-word"> дней подряд</small></p>
+      <p id="pr-text" class="panel-text">Минуты речи за неделю появятся после первого разговора.</p>
+      <svg id="pr-spark" class="spark" viewBox="0 0 140 28" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <div class="panel-actions"><button type="button" class="ghost small" id="btn-progress">Весь прогресс</button></div>
+    </article>
+  </section>
 
   <section aria-labelledby="pick-title">
     <h2 id="pick-title" class="eyebrow">Разговор</h2>
@@ -38,13 +74,17 @@
 <main id="talk" class="page talk" hidden>
   <header class="talkbar">
     <button type="button" class="ghost" id="btn-back" aria-label="К выбору разговора">←</button>
-    <h1 id="talk-title" class="talk-title"></h1>
+    <div class="talk-head">
+      <h1 id="talk-title" class="talk-title"></h1>
+      <span id="talk-level" class="chip"></span>
+    </div>
     <dl class="meters" aria-label="Статистика">
       <div><dt>реплик</dt><dd id="m-turns">0</dd></div>
       <div><dt>слов</dt><dd id="m-words">0</dd></div>
       <div title="Слов в минуту. Обычный темп разговора носителя — около 130–160."><dt>темп</dt><dd id="m-wpm">—</dd></div>
+      <div title="Уровень твоих реплик в этом разговоре (медиана)"><dt>уровень</dt><dd id="m-level">—</dd></div>
     </dl>
-    <button type="button" class="primary small" id="btn-finish">Завершить</button>
+    <button type="button" class="primary small" id="btn-finish" data-lock>Завершить</button>
   </header>
 
   <ol id="transcript" class="transcript" aria-live="polite"></ol>
@@ -56,13 +96,13 @@
   </div>
 
   <footer class="dock">
-    <button type="button" class="ghost" id="btn-hint">Не знаю, что сказать</button>
+    <button type="button" class="ghost" id="btn-hint" data-lock>Не знаю, что сказать</button>
     <div class="mic-wrap">
-      <button type="button" id="mic" class="mic" aria-label="Говорить">
+      <button type="button" id="mic" class="mic" aria-label="Говорить" data-lock>
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
       </button>
       <canvas id="level" class="level" width="160" height="28" aria-hidden="true"></canvas>
-      <p id="status" class="status">Держи <kbd>Пробел</kbd> и говори</p>
+      <p class="status" data-status>Держи <kbd>Пробел</kbd> и говори</p>
     </div>
     <button type="button" class="ghost" id="btn-replay">Повторить вопрос</button>
   </footer>
@@ -75,18 +115,85 @@
     <h1 class="brand small">Итоги разговора</h1>
   </header>
   <dl id="sum-stats" class="stat-row"></dl>
+  <section class="level-verdict" id="sum-level-block">
+    <span id="sum-level" class="level-code"></span>
+    <p id="sum-level-note" class="panel-text"></p>
+  </section>
   <p id="sum-verdict" class="verdict"></p>
   <div class="sum-grid">
     <section><h2 class="eyebrow">Получилось</h2><ul id="sum-strengths" class="plain"></ul></section>
     <section><h2 class="eyebrow">Над чем поработать</h2><ul id="sum-focus" class="focus"></ul></section>
   </div>
-  <section><h2 class="eyebrow">Фразы на следующий раз</h2><ul id="sum-phrases" class="phrases"></ul></section>
+  <section>
+    <div class="section-head"><h2 class="eyebrow">Фразы на следующий раз</h2>
+      <button type="button" class="ghost small" id="btn-add-all">Все в тетрадь</button></div>
+    <ul id="sum-phrases" class="phrases"></ul>
+  </section>
   <button type="button" class="primary" id="btn-again">Ещё разговор</button>
 </main>
 
+<!-- ===== Тетрадь: повторение ===== -->
+<main id="cards" class="page" hidden>
+  <header class="talkbar flat">
+    <button type="button" class="ghost" id="btn-cards-back" aria-label="На главную">←</button>
+    <h1 class="talk-title">Тетрадь фраз</h1>
+    <span id="drill-count" class="chip"></span>
+  </header>
+
+  <section id="drill" class="drill" hidden aria-live="polite">
+    <p class="eyebrow">Скажи по-английски</p>
+    <p id="drill-ru" class="drill-ru"></p>
+    <div class="mic-wrap">
+      <button type="button" id="drill-mic" class="mic" aria-label="Сказать фразу" data-lock>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+      </button>
+      <canvas id="drill-level" class="level" width="160" height="28" aria-hidden="true"></canvas>
+      <p class="status" data-status>Держи <kbd>Пробел</kbd> и говори</p>
+    </div>
+    <div id="drill-result" class="drill-result" hidden></div>
+    <div class="drill-actions">
+      <button type="button" class="ghost small" id="drill-reveal" data-lock>Не помню — показать</button>
+      <button type="button" class="ghost small" id="drill-accept" data-lock hidden>Засчитать: так тоже верно</button>
+      <button type="button" class="primary small" id="drill-next" data-lock hidden>Дальше</button>
+    </div>
+  </section>
+
+  <section id="drill-done" class="drill-done" hidden>
+    <h2 class="brand small">На сегодня всё</h2>
+    <p class="panel-text">Фразы, произнесённые верно, вернутся через несколько дней — так они закрепляются надолго.</p>
+  </section>
+
+  <section aria-labelledby="all-cards-title">
+    <h2 id="all-cards-title" class="eyebrow">Все фразы</h2>
+    <p id="cards-empty" class="panel-text" hidden>Пока пусто. В разговоре нажимай «В тетрадь» у исправленной фразы или полезного выражения.</p>
+    <ul id="card-list" class="card-list"></ul>
+  </section>
+</main>
+
+<!-- ===== Прогресс ===== -->
+<main id="progress" class="page" hidden>
+  <header class="talkbar flat">
+    <button type="button" class="ghost" id="btn-progress-back" aria-label="На главную">←</button>
+    <h1 class="talk-title">Прогресс</h1>
+  </header>
+  <dl id="pg-tiles" class="stat-row five"></dl>
+  <p class="panel-text">Последние 30 дней. Наведи на столбик или точку, чтобы увидеть цифры.</p>
+  <div class="charts">
+    <figure class="chart"><figcaption>Минуты твоей речи</figcaption><div id="ch-minutes" class="chart-box"></div></figure>
+    <figure class="chart"><figcaption>Темп, слов в минуту <small>носители: ~130–160</small></figcaption><div id="ch-wpm" class="chart-box"></div></figure>
+    <figure class="chart"><figcaption>Реплики без ошибок, %</figcaption><div id="ch-clean" class="chart-box"></div></figure>
+    <figure class="chart"><figcaption>Уровень реплик (медиана за день)</figcaption><div id="ch-level" class="chart-box"></div></figure>
+  </div>
+  <details class="table-view">
+    <summary>Таблица по дням</summary>
+    <div class="table-scroll"><table id="pg-table"></table></div>
+  </details>
+</main>
+
+<div id="tooltip" class="tooltip" role="status" hidden></div>
 <div id="toast" class="toast" role="alert" hidden></div>
 
-<script>window.SCENARIOS = /*__SCENARIOS__*/[];</script>
-<script src="/static/app.js"></script>
+<script>window.SPEAK = /*__CONFIG__*/{};</script>
+<script type="module" src="/static/js/main.js"></script>
 </body>
 </html>

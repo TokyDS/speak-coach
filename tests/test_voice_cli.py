@@ -5,7 +5,7 @@ import pytest
 from speak import __main__ as cli
 from speak import audio
 from speak.config import Settings, load_settings
-from speak.voice import Speaker, Transcriber
+from speak.voice import Speaker, Transcriber, to_word
 
 REAL = load_settings()
 needs_models = pytest.mark.skipif(
@@ -52,8 +52,22 @@ def test_speaker_without_voice_explains_setup(tmp_path):
 
 
 @needs_models
-def test_round_trip_synthesis_is_recognised():
-    """Голос Piper → ffmpeg → Whisper: распознанный текст совпадает со сказанным."""
+def test_round_trip_synthesis_is_recognised_with_word_timings():
+    """Голос Piper → ffmpeg → Whisper: текст совпадает, у слов есть тайминги и уверенность."""
     wav = Speaker(REAL.voice_path).synthesize("Hello, how was your weekend?", slow=True)
-    heard = Transcriber("base.en").transcribe(audio.decode(wav)).lower()
-    assert "weekend" in heard and "hello" in heard
+    transcript = Transcriber("base.en").transcribe(audio.decode(wav))
+    assert "weekend" in transcript.text.lower() and "hello" in transcript.text.lower()
+    words = [w.text.lower() for w in transcript.words]
+    assert words == ["hello", "how", "was", "your", "weekend"]  # пунктуация срезана
+    assert all(0 <= w.start < w.end for w in transcript.words)
+    assert all(not w.unsure for w in transcript.words)  # чёткий синтетический голос — уверенно
+    assert all(isinstance(w.public()["start"], float) for w in transcript.words)
+
+
+def test_to_word_strips_punctuation_and_numpy_types():
+    import numpy as np
+
+    word = to_word(" weekend?", np.float32(1.25), np.float32(1.75), np.float32(0.4))
+    assert word.text == "weekend" and word.unsure and type(word.start) is float
+    assert to_word(" ...", 0, 1, 0.9) is None
+    assert to_word("don't,", 0, 1, 0.9).text == "don't"
