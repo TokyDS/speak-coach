@@ -10,7 +10,9 @@ import webbrowser
 
 from .coach import Coach
 from .config import Settings, load_settings
-from .server import DEFAULT_PORT, HOST, App, serve
+from .partner import Partners
+from .phrasebook import Phrasebook
+from .server import DEFAULT_PORT, HOST, App, serve, shutdown_workers
 from .session import SessionStore
 from .voice import Speaker, Transcriber
 
@@ -52,9 +54,10 @@ def cmd_serve(settings: Settings, port: int, open_browser: bool) -> int:
         return 1
     transcriber = Transcriber(settings.whisper_model)
     speaker = Speaker(settings.voice_path)
+    partners = Partners(settings.claude_model)
     app = App(transcribe=transcriber.transcribe, synthesize=speaker.synthesize,
-              coach=Coach(settings.claude_model), store=SessionStore(),
-              sessions_dir=settings.sessions_dir)
+              coach=Coach(settings.claude_model), partners=partners, store=SessionStore(),
+              sessions_dir=settings.sessions_dir, phrasebook=Phrasebook(settings.phrasebook_path))
     try:
         httpd = serve(app, port)
     except OSError as exc:
@@ -75,6 +78,8 @@ def cmd_serve(settings: Settings, port: int, open_browser: bool) -> int:
         log.info("пока!")
     finally:
         httpd.server_close()
+        partners.close_all()
+        shutdown_workers()
     return 0
 
 

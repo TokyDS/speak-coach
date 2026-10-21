@@ -22,6 +22,10 @@ class Settings:
         return self.data_dir / "sessions"
 
     @property
+    def phrasebook_path(self) -> Path:
+        return self.data_dir / "phrasebook.json"
+
+    @property
     def voice_path(self) -> Path:
         return self.voices_dir / f"{self.voice}.onnx"
 
