@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Speak Up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+
+<!-- ===== Выбор разговора ===== -->
+<main id="start" class="page">
+  <header class="masthead">
+    <h1 class="brand">Speak&nbsp;Up</h1>
+    <p class="lede">Выбери, о чём поговорить. Отвечай вслух: держи <kbd>Пробел</kbd> или нажми на микрофон.
+      После каждой реплики увидишь, как сказать правильнее и естественнее.</p>
+  </header>
+
+  <section aria-labelledby="pick-title">
+    <h2 id="pick-title" class="eyebrow">Разговор</h2>
+    <div id="scenarios" class="scenario-grid"></div>
+  </section>
+
+  <section class="options" aria-label="Настройки">
+    <label class="switch"><input type="checkbox" id="opt-slow"><span>Собеседник говорит медленнее</span></label>
+    <label class="switch"><input type="checkbox" id="opt-hide"><span>Прятать текст собеседника — тренировать слух</span></label>
+  </section>
+
+  <section id="history-block" aria-labelledby="history-title" hidden>
+    <h2 id="history-title" class="eyebrow">Прошлые разговоры</h2>
+    <ol id="history" class="history"></ol>
+  </section>
+</main>
+
+<!-- ===== Разговор ===== -->
+<main id="talk" class="page talk" hidden>
+  <header class="talkbar">
+    <button type="button" class="ghost" id="btn-back" aria-label="К выбору разговора">←</button>
+    <h1 id="talk-title" class="talk-title"></h1>
+    <dl class="meters" aria-label="Статистика">
+      <div><dt>реплик</dt><dd id="m-turns">0</dd></div>
+      <div><dt>слов</dt><dd id="m-words">0</dd></div>
+      <div title="Слов в минуту. Обычный темп разговора носителя — около 130–160."><dt>темп</dt><dd id="m-wpm">—</dd></div>
+    </dl>
+    <button type="button" class="primary small" id="btn-finish">Завершить</button>
+  </header>
+
+  <ol id="transcript" class="transcript" aria-live="polite"></ol>
+
+  <div id="hint-box" class="hint-box" hidden>
+    <div class="hint-head"><span class="eyebrow">Можно начать так</span>
+      <button type="button" class="ghost small" id="btn-hint-close" aria-label="Закрыть подсказку">✕</button></div>
+    <ul id="hints"></ul>
+  </div>
+
+  <footer class="dock">
+    <button type="button" class="ghost" id="btn-hint">Не знаю, что сказать</button>
+    <div class="mic-wrap">
+      <button type="button" id="mic" class="mic" aria-label="Говорить">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+      </button>
+      <canvas id="level" class="level" width="160" height="28" aria-hidden="true"></canvas>
+      <p id="status" class="status">Держи <kbd>Пробел</kbd> и говори</p>
+    </div>
+    <button type="button" class="ghost" id="btn-replay">Повторить вопрос</button>
+  </footer>
+</main>
+
+<!-- ===== Итоги ===== -->
+<main id="summary" class="page" hidden>
+  <header class="masthead">
+    <p class="eyebrow" id="sum-title"></p>
+    <h1 class="brand small">Итоги разговора</h1>
+  </header>
+  <dl id="sum-stats" class="stat-row"></dl>
+  <p id="sum-verdict" class="verdict"></p>
+  <div class="sum-grid">
+    <section><h2 class="eyebrow">Получилось</h2><ul id="sum-strengths" class="plain"></ul></section>
+    <section><h2 class="eyebrow">Над чем поработать</h2><ul id="sum-focus" class="focus"></ul></section>
+  </div>
+  <section><h2 class="eyebrow">Фразы на следующий раз</h2><ul id="sum-phrases" class="phrases"></ul></section>
+  <button type="button" class="primary" id="btn-again">Ещё разговор</button>
+</main>
+
+<div id="toast" class="toast" role="alert" hidden></div>
+
+<script>window.SCENARIOS = /*__SCENARIOS__*/[];</script>
+<script src="/static/app.js"></script>
+</body>
+</html>
