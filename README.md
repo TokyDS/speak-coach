@@ -32,9 +32,9 @@
 ## Установка (один раз)
 
 ```bash
-cd ~/claude/projects/speak-coach
+git clone https://github.com/TokyDS/speak-coach.git && cd speak-coach
 python3 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
-ln -s ~/claude/projects/speak-coach/bin/speak ~/.local/bin/speak   # команда speak из любой папки
+ln -s "$PWD/bin/speak" ~/.local/bin/speak   # команда speak из любой папки
 speak setup      # голос (~60 МБ) и модель распознавания (~500 МБ)
 speak check      # ffmpeg, claude, голос — всё ли на месте
 ```
